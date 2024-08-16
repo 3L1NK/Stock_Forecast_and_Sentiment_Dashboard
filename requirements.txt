@@ -19,3 +19,4 @@ xgboost~=2.0.3
 pytrends~=4.9.2
 urllib3~=2.2.1
 gunicorn
+finnhub-python~=2.4.20
