@@ -1,0 +1,18 @@
+.custom-info-button {
+    background-color: transparent; /* Transparent background since it's an outline button */
+    border: 1px solid #444444; /* Normal border color */
+    color: #444444; /* Normal icon color */
+    border-radius: 50%;  /* Makes the button circular */
+    width: 40px;
+    height: 40px;
+    text-align: center;  /* Center the icon inside the button */
+    line-height: 40px;  /* Vertically center the icon */
+    padding: 0;
+}
+
+.custom-info-button:hover {
+    background-color: #444444; /* Background color on hover */
+    border-color: #444444; /* Border color on hover */
+    color: white; /* Icon color on hover */
+}
+
