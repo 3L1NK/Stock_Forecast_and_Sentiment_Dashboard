@@ -22,4 +22,4 @@ torch~=2.0.1
 gunicorn
 finnhub-python~=2.4.20
 transformers~=4.44.0
-typting_extension==4.5.0
+typing-extensions==4.5.0
