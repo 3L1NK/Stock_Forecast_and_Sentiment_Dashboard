@@ -18,8 +18,8 @@ def test_stationarity(timeseries):
     dfoutput = pd.Series(dftest[0:4], index=['Test Statistic', 'p-value', '#Lags Used', 'Number of Observations Used'])
     for key, value in dftest[4].items():
         dfoutput['Critical Value (%s)' % key] = value
-    print('Results of Dickey-Fuller Test:')
-    print(dfoutput)
+    #print('Results of Dickey-Fuller Test:')
+    #print(dfoutput)
 
 def create_features(data, window=40):
     X, y = [], []
