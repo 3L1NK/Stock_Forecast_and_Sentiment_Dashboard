@@ -26,7 +26,7 @@ def test_stationarity(timeseries):
     output = pd.Series(adft[0:4], index=['Test Statistics','p-value','No. of lags used','Number of observations used'])
     for key, values in adft[4].items():
         output['critical value (%s)' % key] = values
-    print(output)
+    #print(output)
 
     return adft[1]  # Return the p-value
 
