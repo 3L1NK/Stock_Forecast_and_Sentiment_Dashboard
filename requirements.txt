@@ -18,3 +18,4 @@ pillow~=10.3.0
 xgboost~=2.0.3
 pytrends~=4.9.2
 urllib3~=2.2.1
+torch~=2.2.2

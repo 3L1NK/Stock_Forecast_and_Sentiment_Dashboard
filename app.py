@@ -1255,7 +1255,7 @@ def update_news_df_vader(selected_ticker):
     Input('ticker-dropdown', 'value')
 )
 def update_news_df_twitter_roberta(selected_ticker):
-    news_df_twitter_roberta = calculate_sentiment_moving_avg(f'./news_sentiment/news_{selected_ticker}_twitter_roberta.csv', 'Twitter RoBERTa Sentiment')
+    news_df_twitter_roberta = calculate_sentiment_moving_avg(f'./news_sentiment/news_{selected_ticker}_twitter_roBERTa.csv', 'Twitter RoBERTa Sentiment')
     return news_df_twitter_roberta.to_dict('records')
 
 @app.callback(
