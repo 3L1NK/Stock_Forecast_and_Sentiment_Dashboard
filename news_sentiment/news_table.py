@@ -7,8 +7,20 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, Auto
 import numpy as np
 from scipy.special import softmax
 from transformers import pipeline
+import logging
+from transformers import logging as transformers_logging
 
 def fetch_news_for_ticker(ticker):
+    """
+    Fetches news articles for a given stock ticker from Finnhub for the last day.
+
+    Parameters:
+        ticker (str): Stock ticker symbol.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the most recent news articles for the specified ticker,
+                      with columns such as 'ID', 'Date', 'Time', 'DateTime', 'Headline', 'Summary', and 'URL'.
+    """
     # Initialize the Finnhub client
     finnhub_client = finnhub.Client(api_key='cpfiao9r01quaqfq8q4gcpfiao9r01quaqfq8q50')
 
@@ -51,6 +63,7 @@ def fetch_news_for_ticker(ticker):
         # Rearrange the columns
         news_df = news_df[['id', 'date', 'time', 'datetime', 'headline', 'summary', 'url']]
 
+        # Rename columns for readability
         news_df.rename(
             columns={'id': 'ID', 'date': 'Date', 'time': 'Time', 'datetime': 'DateTime', 'headline': 'Headline', 'summary': 'Summary',
                      'url': 'URL'}, inplace=True)
@@ -68,31 +81,67 @@ def fetch_news_for_ticker(ticker):
 
 
 def vader_news_sentiment(df):
+    """
+    Analyzes the sentiment of news headlines using the VADER sentiment analysis tool.
+
+    Parameters:
+        df (pd.DataFrame): DataFrame containing news articles with a 'Headline' column.
+
+    Returns:
+        pd.DataFrame: Original DataFrame with added columns for Positive Score, Negative Score, and VADER Sentiment Score.
+    """
     # Download VADER lexicon if not already downloaded
     nltk.download('vader_lexicon', quiet=True)
 
     # Sentiment Analysis on news article titles
     vader = SentimentIntensityAnalyzer()
 
+    # Calculate the positive and negative sentiment score for each headline
     df['Positive Score'] = df['Headline'].apply(lambda title: vader.polarity_scores(title)['pos'])
     df['Negative Score'] = df['Headline'].apply(lambda title: vader.polarity_scores(title)['neg'])
+
+    # Calculate the VADER Sentiment Score by subtracting the negative score from the positive score
     df['VADER Sentiment Score'] = df['Positive Score'] - df['Negative Score']
 
-    # Apply rounding using a lambda function
+    # Round the VADER Sentiment Score to three decimal places
     df['VADER Sentiment Score'] = df['VADER Sentiment Score'].apply(lambda x: round(x, 3))
 
     return df
 
 
-def twitter_roBERTa_news_sentiment(df):
+def twitter_roberta_news_sentiment(df):
+    """
+    Analyzes the sentiment of news headlines using the Twitter RoBERTa model.
+
+    Parameters:
+        df (pd.DataFrame): DataFrame containing news articles with a 'Headline' column.
+
+    Returns:
+        pd.DataFrame: Original DataFrame with added columns for positive, neutral, negative sentiment scores,
+                      and the Twitter RoBERTa Sentiment Score.
+    """
+    # Suppress the warning related to unused weights
+    logging.basicConfig(level=logging.ERROR)
+    transformers_logging.set_verbosity_error()
+
+    # Load the Twitter RoBERTa model and tokenizer
     MODEL = 'cardiffnlp/twitter-roberta-base-sentiment-latest'
     tokenizer = AutoTokenizer.from_pretrained(MODEL)
     config = AutoConfig.from_pretrained(MODEL)
     model = AutoModelForSequenceClassification.from_pretrained(MODEL)
 
-    # Define a function to analyze sentiment of a text
-    def analyze_sentiment(text):
-        encoded_input = tokenizer(text, return_tensors='pt')
+    def analyze_sentiment(headline):
+        """
+        Analyzes the sentiment of a single text using the Twitter RoBERTa model.
+
+        Parameters:
+            headline (str): The news headline to analyze.
+
+        Returns:
+            list: A list of tuples containing sentiment labels and their corresponding scores.
+        """
+        # Tokenize the headline and perform sentiment analysis
+        encoded_input = tokenizer(headline, return_tensors='pt')
         output = model(**encoded_input)
         scores = output.logits[0].detach().numpy()
         scores = softmax(scores)
@@ -103,38 +152,66 @@ def twitter_roBERTa_news_sentiment(df):
     # Apply sentiment analysis on the 'headline' column
     df['Sentiment'] = df['Headline'].apply(lambda x: analyze_sentiment(x))
 
-    # Define a function to extract sentiment scores into separate columns
     def extract_sentiment_scores(sentiment):
+        """
+        Extracts sentiment scores into separate columns for positive, neutral, and negative sentiments.
+
+        Parameters:
+            sentiment (list): A list of tuples containing sentiment labels and their corresponding scores.
+
+        Returns:
+            pd.Series: A series with sentiment scores.
+        """
+        # Initialize a dictionary to hold sentiment scores, defaulting to 0.0
         score_dict = {label: 0.0 for label in ['positive', 'neutral', 'negative']}
         for label, score in sentiment:
             score_dict[label] = score
         return pd.Series(score_dict)
 
-    # Apply the function to the sentiment column
+    # Apply the extraction function to the 'Sentiment' column to create separate sentiment score columns
     sentiment_scores = df['Sentiment'].apply(extract_sentiment_scores)
 
     # Concatenate the new sentiment score columns with the original dataframe
     df = pd.concat([df, sentiment_scores], axis=1)
 
-    # Calculate the Twitter RoBERTa Sentiment Score
+    # Calculate the Twitter RoBERTa Sentiment Score by subtracting the negative score from the positive score
     df['Twitter RoBERTa Sentiment Score'] = df['positive'] - df['negative']
 
-    # Apply rounding using a lambda function
+    # Round the Twitter RoBERTa Sentiment Score to three decimal places
     df['Twitter RoBERTa Sentiment Score'] = df['Twitter RoBERTa Sentiment Score'].apply(lambda x: round(x, 3))
 
     return df
 
 
 def distilroberta_news_sentiment(df):
+    """
+    Analyzes the sentiment of news headlines using the DistilRoberta model fine-tuned for financial news.
 
+    Parameters:
+        df (pd.DataFrame): DataFrame containing news articles with a 'Headline' column.
+
+    Returns:
+        pd.DataFrame: Original DataFrame with added columns for positive, neutral, negative sentiment scores,
+                      and the DistilRoberta Sentiment Score.
+    """
+    # Load the DistilRoberta model and tokenizer
     MODEL = 'mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis'
     tokenizer = AutoTokenizer.from_pretrained(MODEL)
     config = AutoConfig.from_pretrained(MODEL)
     model = AutoModelForSequenceClassification.from_pretrained(MODEL)
 
-    # Define a function to analyze sentiment of a text
-    def analyze_sentiment(text):
-        encoded_input = tokenizer(text, return_tensors='pt')
+    def analyze_sentiment(headline):
+        """
+        Analyzes the sentiment of a single text using the DistilRoberta model.
+
+        Parameters:
+            headline (str): The news headline to analyze.
+
+        Returns:
+            list: A list of tuples containing sentiment labels and their corresponding scores.
+        """
+        # Tokenize the headline and perform sentiment analysis
+        encoded_input = tokenizer(headline, return_tensors='pt')
         output = model(**encoded_input)
         scores = output.logits[0].detach().numpy()
         scores = softmax(scores)
@@ -145,8 +222,17 @@ def distilroberta_news_sentiment(df):
     # Apply sentiment analysis on the 'headline' column
     df['Sentiment'] = df['Headline'].apply(lambda x: analyze_sentiment(x))
 
-    # Define a function to extract sentiment scores into separate columns
     def extract_sentiment_scores(sentiment):
+        """
+        Extracts sentiment scores into separate columns for positive, neutral, and negative sentiments.
+
+        Parameters:
+            sentiment (list): A list of tuples containing sentiment labels and their corresponding scores.
+
+        Returns:
+            pd.Series: A series with sentiment scores.
+        """
+        # Initialize a dictionary to hold sentiment scores, defaulting to 0.0
         score_dict = {label: 0.0 for label in ['positive', 'neutral', 'negative']}
         for label, score in sentiment:
             score_dict[label] = score
@@ -158,31 +244,50 @@ def distilroberta_news_sentiment(df):
     # Concatenate the new sentiment score columns with the original dataframe
     df = pd.concat([df, sentiment_scores], axis=1)
 
-    # Calculate DistilRoberta Sentiment Score
+    # Calculate DistilRoberta Sentiment Score by subtracting the negative score from the positive score
     df['DistilRoberta Sentiment Score'] = df['positive'] - df['negative']
 
-    # Apply rounding using a lambda function
+    # Round the DistilRoberta Sentiment Score to three decimal places
     df['DistilRoberta Sentiment Score'] = df['DistilRoberta Sentiment Score'].apply(lambda x: round(x, 3))
 
     return df
 
 
-def BART_MNLI_impact_on_stock_price(df):
-    # Load Twitter RoBERTa
-    df = twitter_roBERTa_news_sentiment(df)
+def bart_large_mnli_impact_on_stock_price(df):
+    """
+    Analyzes the impact of news articles on stock prices using the BART Large MNLI model.
 
-    # Load the BART MNLI model
+    Parameters:
+        df (pd.DataFrame): DataFrame containing news articles with a 'Headline' column.
+
+    Returns:
+        pd.DataFrame: Original DataFrame with an added column indicating the predicted impact on stock prices.
+    """
+    # Load Twitter RoBERTa for initial sentiment analysis
+    df = twitter_roberta_news_sentiment(df)
+
+    # Load the BART Large MNLI model for zero-shot classification
     classifier = pipeline('zero-shot-classification', model='facebook/bart-large-mnli')
 
-    # Define candidate labels
+    # Define candidate labels representing different impacts on stock price
     candidate_labels = [
         'The news article suggests a positive impact on the stock price of Apple Inc.',
         'The news article suggests a negative impact on the stock price of Apple Inc.',
         'The news article suggests no significant impact on the stock price of Apple Inc.'
     ]
 
-    # Function to classify and format the result
-    def classify_with_mnli(headline, classifier, candidate_labels):
+    def classify_with_bart_large_mnli(headline, classifier, candidate_labels):
+        """
+        Classifies a headline into one of the candidate labels using BART Large MNLI.
+
+        Parameters:
+            headline (str): The headline to classify.
+            classifier: The BART Large MNLI classification pipeline.
+            candidate_labels (list): List of candidate labels for classification.
+
+        Returns:
+            str: The label with the highest probability and its associated probability.
+        """
         result = classifier(headline, candidate_labels)
         # Get the highest probability label and its corresponding probability
         label = result['labels'][0]
@@ -196,22 +301,33 @@ def BART_MNLI_impact_on_stock_price(df):
         elif 'no significant impact' in label:
             shortened_label = 'neutral'
 
+        # Return the shortened label with the probability
         return f'{shortened_label}: {probability:.3f}'
 
     # Apply the classification and store in a new column
-    df['BART MNLI: Impact on Stock Price'] = df['Headline'].apply(lambda headline: classify_with_mnli(headline, classifier, candidate_labels))
+    df['BART MNLI: Impact on Stock Price'] = df['Headline'].apply(lambda headline: classify_with_bart_large_mnli(headline, classifier, candidate_labels))
 
     return df
 
 
-def combine_sentiment_models(df):
-    # Get the dataframes from each sentiment analysis function
-    df_vader = vader_news_sentiment(df.copy())
-    df_twitter_roberta = twitter_roBERTa_news_sentiment(df.copy())
-    df_distilroberta = distilroberta_news_sentiment(df.copy())
-    df_bart_mnli = BART_MNLI_impact_on_stock_price(df.copy())
+def combine_news_analysis_models(df):
+    """
+    Combines the results from multiple news analysis models, including sentiment analysis models
+    and a model for predicting the impact of news on stock prices, into a single DataFrame.
 
-    # Select relevant columns to merge (ID and DateTime) and their respective sentiment scores
+    Parameters:
+        df (pd.DataFrame): DataFrame containing news articles with a 'Headline' column.
+
+    Returns:
+        pd.DataFrame: Combined DataFrame with analysis results from VADER, Twitter RoBERTa, DistilRoberta, and BART Large MNLI models.
+    """
+    # Get the dataframes from each analysis function
+    df_vader = vader_news_sentiment(df.copy())
+    df_twitter_roberta = twitter_roberta_news_sentiment(df.copy())
+    df_distilroberta = distilroberta_news_sentiment(df.copy())
+    df_bart_mnli = bart_large_mnli_impact_on_stock_price(df.copy())
+
+    # Select relevant columns to merge (ID and DateTime) and their respective analysis results
     df_vader = df_vader[['ID', 'Date', 'Time', 'DateTime', 'Headline', 'Summary', 'URL', 'VADER Sentiment Score']]
     df_twitter_roberta = df_twitter_roberta[['ID', 'DateTime', 'Twitter RoBERTa Sentiment Score']]
     df_distilroberta = df_distilroberta[['ID', 'DateTime', 'DistilRoberta Sentiment Score']]
@@ -224,12 +340,3 @@ def combine_sentiment_models(df):
     combined_df = combined_df.merge(df_bart_mnli, on=['ID', 'DateTime'], how='inner')
 
     return combined_df
-
-
-# Example usage
-#ticker = 'AAPL'
-# Step 1: Fetch news for the given ticker
-#news_df = fetch_news_for_ticker(ticker)
-# Step 2: Combine sentiment models
-#combined_sentiment_df = combine_sentiment_models(news_df)
-#print(combined_sentiment_df)
