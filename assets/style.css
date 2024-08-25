@@ -1,18 +1,17 @@
 .custom-info-button {
-    background-color: transparent; /* Transparent background since it's an outline button */
-    border: 1px solid #444444; /* Normal border color */
-    color: #444444; /* Normal icon color */
-    border-radius: 50%;  /* Makes the button circular */
-    width: 40px;
-    height: 40px;
-    text-align: center;  /* Center the icon inside the button */
-    line-height: 40px;  /* Vertically center the icon */
-    padding: 0;
+    background-color: transparent;  /* Transparent background */
+    border: 1px solid #444444;  /* Set the border color to dark gray */
+    color: #444444;  /* Set the icon color to dark gray */
+    border-radius: 50%;  /* Make the button circular */
+    width: 40px;  /* Set the width of the button to 40 pixels (same width and height to ensure the button is a circle) */
+    height: 40px;  /* Set the height of the button to 40 pixels */
+    text-align: center;  /* Center the icon horizontally inside the button */
+    line-height: 40px;  /* Align the icon vertically in the middle of the button by matching the line height with the button's height */
+    padding: 0; /* Remove any internal padding inside the button */
 }
 
 .custom-info-button:hover {
-    background-color: #444444; /* Background color on hover */
-    border-color: #444444; /* Border color on hover */
-    color: white; /* Icon color on hover */
+    background-color: #444444; /* Change the background color to dark gray when hovering */
+    border-color: #444444; /* Change the border color to dark gray when hovering */
+    color: white; /* Change the icon color to white when hovering */
 }
-
