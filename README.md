@@ -57,7 +57,7 @@ Clone the repository from GitHub using the following command:
 ## Accessing Live Website
 
 Click on this link to access the deployed website:
-[Deployed Website](https://appliedpredictiveanalytics-b6rsdb5r2a-lm.a.run.app)
+[Deployed Website](https://appliedpredictiveanalytics-b6rsdb5r2a-lm.a.run.app) (needs to be redeployed)
 
 **Note:** After deployment, we noticed that the news table is not displaying correctly on the deployed website, although the data is being loaded. No errors related to the news sentiment table were observed in the Logs Explorer on the Google Cloud Platform.
 
